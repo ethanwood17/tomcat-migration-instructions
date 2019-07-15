@@ -47,14 +47,14 @@ You may need to change references to this JNDI value in your app. Some apps use 
 Also, because of how Tomcat's classloader works, you won't be able to include the `javax.mail.jar` dependency from Maven in your project. Instead, you'll want to include the Tomcat libs as a project classpath dependency. That way to do that is to go to File->Project Structure, and click on the Libraries tab. From there, add a library record with the path to your Tomcat `libs` folder. Because you'll be using the `javax.mail.jar` dependency in your Tomcat `libs` folder, you'll have to exclude that jar from any other dependencies that include it as a transitive dependency. For instance, `spring-boot-starter-mail` includes that jar, so if you're using that dependency, you'll have to exclude the mail jar, like this: 
 ```xml
 <dependency>
-	<groupId>org.springframework.boot</groupId>
-	<artifactId>spring-boot-starter-mail</artifactId>
-	<exclusions>
-		<exclusion>
-			<groupId>com.sun.mail</groupId>
-			<artifactId>javax.mail</artifactId>
-		</exclusion>
-	</exclusions>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-mail</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+        </exclusion>
+    </exclusions>
 </dependency>
  ```
  Otherwise you'll get an error like this when starting the application: 

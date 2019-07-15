@@ -1,4 +1,4 @@
-## Instructions for Setting up a Local Tomcat Install w/ Intellij Support
+# Instructions for Setting up a Local Tomcat Install w/ Intellij Support
 
 ## Default Configuration
 1. To install Tomcat with Homebrew: `brew install tomcat`. This is easier than installing it yourself, as it gives you the updating and management power of Homebrew. 
@@ -31,7 +31,7 @@ svn co https://code.office.uii/svn/repo/uii/stat/branches/1.2/ stat/1.2
 svn co https://code.office.uii/svn/repo/uii/stat/branches/1.3/ stat/1.3
 ```
 
-### Adding Mail support
+## Adding Mail support
 
 Add mail support to Tomcat. In `libexec/conf`, open `server.xml` and inside the GlobalNamingResources block, add this. 
 ```xml
@@ -48,7 +48,16 @@ After saving the file, open `context.xml` and inside the `Context` block, add th
 ```
 You may need to change references to this JNDI value in your app. Some apps use a Glassfish JDNI/web.xml hack, wherein the MailSession is defined in the web.xml file and included as a JNDI value in a Spring config file. If you find that, remove the JNDI configuration from the web.xml file, then change any references to the JDNI value from something like this: `java:comp/env/web.xml/mail/support` to something like this: `java:comp/env/mail/support`. Essentially, get rid of the web.xml part.
 
-Also, because of how Tomcat's classloader works, you won't be able to include the `javax.mail.jar` dependency from Maven in your project. Instead, you'll want to include the Tomcat libs as a project classpath dependency. That way to do that is to go to File->Project Structure, and click on the Libraries tab. From there, add a library record with the path to your Tomcat `libs` folder. Because you'll be using the `javax.mail.jar` dependency in your Tomcat `libs` folder, you'll have to exclude that jar from any other dependencies that include it as a transitive dependency. For instance, `spring-boot-starter-mail` includes that jar, so if you're using that dependency, you'll have to exclude the mail jar, like this: 
+Also, because of how Tomcat's classloader works, you won't be able to include the `javax.mail.jar` dependency from Maven in your project. Instead, you'll want to include the mail jar dependency as in `provided` scope, which informs Maven that it should be used to compile with, but not bundled into the WAR. It will be provided by the application server. As long as you've added the mail jar to your Tomcat `/lib` folder, then the dependency should be resolved properly. That Maven dependency should look like this, assuming you're using the JAR file located in Confluence: 
+```xml
+<dependency>
+    <groupId>com.sun.mail</groupId>
+    <artifactId>javax.mail</artifactId>
+    <version>1.5.6</version>
+    <scope>provided</scope>
+</dependency>
+```
+Then, if your app uses any Spring mail libraries, you'll have to exclude the mail jar from those. For instance, if you want to use the `JavaMailSender` class, bundled in Spring mail dependencies, you'll have to do something like this: 
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -65,8 +74,9 @@ Also, because of how Tomcat's classloader works, you won't be able to include th
  ```
  The local resource link [support] that refers to global resource [mail/support] was expected to return an instance of [javax.mail.Session] but returned an instance of [javax.mail.Session]
  ```
+ It's all a little bit of a pain, but oh well. 
 
-### Configuring Shared App Content
+## Configuring Shared App Content
 
 If you use Spring 5 and include the new `spring-boot-starter-security`, you might run into an error similar to this: 
 ```
@@ -81,7 +91,7 @@ Apparently, the shared app content servlet uses semicolons in its urls to do dec
 <sec:http-firewall ref="allowSemicolonHttpFirewall"/>
 ```
 
-### Using Account
+## Using Account
 
 Some changes need to be made to account before it can be deployed on Tomcat. To get Account, clone the svn repo using this command in your development directory (wherever you put your source). 
 ```bash

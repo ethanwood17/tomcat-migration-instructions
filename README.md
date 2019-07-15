@@ -1,4 +1,6 @@
-### Instructions for Setting up a Local Tomcat Install w/ Intellij Support
+## Instructions for Setting up a Local Tomcat Install w/ Intellij Support
+
+## Default Configuration
 1. To install Tomcat with Homebrew: `brew install tomcat`. This is easier than installing it yourself, as it gives you the updating and management power of Homebrew. 
 
 2. Find your Tomcat home location. You can get this by running this command: `brew ls tomcat`. Copy everything until and including `/libexec/`, should look something like this: `/usr/local/Cellar/tomcat/9.0.21/libexec`
@@ -29,7 +31,9 @@ svn co https://code.office.uii/svn/repo/uii/stat/branches/1.2/ stat/1.2
 svn co https://code.office.uii/svn/repo/uii/stat/branches/1.3/ stat/1.3
 ```
 
-9. Add mail support to Tomcat. In `libexec/conf`, open `server.xml` and inside the GlobalNamingResources block, add this. 
+### Adding Mail support
+
+Add mail support to Tomcat. In `libexec/conf`, open `server.xml` and inside the GlobalNamingResources block, add this. 
 ```xml
 <Resource name="mail/support"
               auth="Container"
@@ -62,7 +66,22 @@ Also, because of how Tomcat's classloader works, you won't be able to include th
  The local resource link [support] that refers to global resource [mail/support] was expected to return an instance of [javax.mail.Session] but returned an instance of [javax.mail.Session]
  ```
 
-## Using Account
+### Configuring Shared App Content
+
+If you use Spring 5 and include the new `spring-boot-starter-security`, you might run into an error similar to this: 
+```
+org.apache.catalina.core.StandardWrapperValve.invoke Servlet.service() for servlet [dba] in context with path [/dba] threw exception org.springframework.security.web.firewall.RequestRejectedException: The request was rejected because the URL contained a potentially malicious String “;”
+```
+Apparently, the shared app content servlet uses semicolons in its urls to do decorating. Newer versions of Spring security block semicolons by default due to security concerns. Therefore, in order to prevent this exception, you need to turn off the default behavior, by adding this to your XML security configuration: 
+```xml
+<bean id="allowSemicolonHttpFirewall" class="org.springframework.security.web.firewall.StrictHttpFirewall">
+    <property name="allowSemicolon" value="true"/>
+</bean>
+
+<sec:http-firewall ref="allowSemicolonHttpFirewall"/>
+```
+
+### Using Account
 
 Some changes need to be made to account before it can be deployed on Tomcat. To get Account, clone the svn repo using this command in your development directory (wherever you put your source). 
 ```bash

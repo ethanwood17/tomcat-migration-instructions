@@ -16,11 +16,12 @@ cp /Users/ewood/Documents/glassfish4/glassfish/domains/domain1/lib/ext/ /usr/loc
 That should copy all your currently used jars in glassfish to your Tomcat lib. 
 
 6. At the bottom of Tomcat's catalina.properties file, add these lines: 
-```
-spring.profiles.active=DEVELOPMENT
+```properties
 STAT_DOMAIN_PATH=https://secure.office.uii
+spring.profiles.active=DEVELOPMENT
+spring.config.location=classpath:/app-configs/,file:/app-configs/*.properties
 ```
-That sets up the Spring development profile and allows Stat support for Stat apps.
+That allows support for Stat apps, sets the Spring development profile, and allows the Spring configuration to be externalized into the `/app-configs/` directory on the servers.
 
 7. (may not be necessary) if you get an error about `jcifs.jar` when deploying, add that to your ignored jars in your Tomcat configuration. That's located at `/usr/local/Cellar/tomcat/9.0.21/libexec/conf/catalina.properties`. The line to add is `jcifs.jar,\` in the list of jars under the heading `tomcat.util.scan.StandardJarScanFilter.jarsToSkip=\`
 
@@ -91,6 +92,32 @@ Apparently, the shared app content servlet uses semicolons in its urls to do dec
 <sec:http-firewall ref="allowSemicolonHttpFirewall"/>
 ```
 
+## Setting up a Development Profile
+
+To replicate the development profile, create an [appname]-DEVELOPMENT.properties file, preferably located in the resources folder of your app. As an example: `dba-DEVELOPMENT.properties`.
+
+If you're using Spring 5, this file should be automatically included by the Spring autoconfiguration. If you're still on Spring 3, you might have to configure the `PropertyPlaceholderConfigurer` bean.
+
+Once you've created that file, put the properties included in your app with JNDI imports in that file, using the id as the key. For instance, if your app has this import line: 
+```xml
+<jee:jndi-lookup id="cmbWebserviceServer"    jndi-name="commerce/cmbWebserviceServer"/>
+```
+Then you can replace it with this property in your DEVELOPMENT profile file:
+```properties
+cmbWebserviceServer=icmnlsdb
+```
+Finally, you'll have to change references to this property in your XML config or Java config files. If you're using XML, use syntax like this: 
+```xml
+<bean id="imageService" class="org.uii.commerce.dba.cmb.ImageService">
+    <constructor-arg value="${cmbWebserviceServer}"/>
+</bean>
+```
+If you're using Java config, you'll have to use the @Value annotation, like this: 
+```java
+@Value("${cmbWebserviceServer}")
+private String cmbWebserviceServer;
+```
+
 ## Using Account
 
 Some changes need to be made to account before it can be deployed on Tomcat. To get Account, clone the svn repo using this command in your development directory (wherever you put your source). 
@@ -120,3 +147,14 @@ cp target/account-2.4.3.war /usr/local/Cellar/tomcat/9.0.21/libexec/webapps/acco
 Substitute the location of your Tomcat install. Also, I'm changing the name of the account WAR from `account-2.4.3.war` to simply `account.war`. The reason for this is that Tomcat deploys the WAR file with the name of the file as the context root. That means that any requests from your app to "account/login.html" will go nowhere, because account will be deployed at "account-2.4.3/". Changing the WAR file name fixes that problem. 
 
 Once Account is in your Tomcat webapps folder, you should be able to run your app in Tomcat. 
+
+## Configuring Jenkins
+
+If you're deploying to Tomcat with Jenkins, you'll have to change some configuration settings. First off, you can delete the Jenkins config section related to `glassfishDeploy`. Delete that section, and uncheck the box for "This project is parameterized". 
+
+Next, scroll down to the Post build task. Change the log text field to "BUILD SUCCESS". Change the script to something like this: 
+```bash
+scp admin/target/*.war tomcat@ui405:/home/tomcat/inst1.ui405/webapps/dba-admin.war
+scp public/target/*.war tomcat@ui405:/home/tomcat/inst1.ui405/webapps/dba.war
+```
+The script will depend on how many WARs you're deploying (separate admin/public portions, or all one single WAR?) and which server/instance you're deploying on. 

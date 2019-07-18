@@ -3,7 +3,7 @@
 ## Default Configuration
 1. **Install Tomcat with Homebrew**
 
-Run `brew install tomcat`. This is easier than installing it yourself, as it gives you the updating and management power of Homebrew. 
+Run `brew install tomcat`. This is easier than installing it yourself, as it gives you the updating and management power of Homebrew. Running this command will install the latest version. If you want to install a specific version, you can run `brew install tomcat@9.0.21`, substituting whatever version you want. 
 
 2. **Find your Tomcat home location** 
 

@@ -1,21 +1,45 @@
 # Instructions for Setting up a Local Tomcat Install w/ Intellij Support
 
 ## Default Configuration
-1. To install Tomcat with Homebrew: `brew install tomcat`. This is easier than installing it yourself, as it gives you the updating and management power of Homebrew. 
+1. **Install Tomcat with Homebrew**
 
-2. Find your Tomcat home location. You can get this by running this command: `brew ls tomcat`. Copy everything until and including `/libexec/`, should look something like this: `/usr/local/Cellar/tomcat/9.0.21/libexec`
+Run `brew install tomcat`. This is easier than installing it yourself, as it gives you the updating and management power of Homebrew. 
 
-3. Create Tomcat server configuration in IntelliJ. Most everything is the same as in Glassfish, just set the Tomcat home to whatever you just copied above. One important thing is under the deploy tab, you'll have to change the default deploy context. Tomcat defaults to /name_of_your_war_file, so change it to /app_name. For example, change /dba_public to /dba. Also, don't put a trailing /, Tomcat doesn't like that. 
+2. **Find your Tomcat home location** 
 
-4. In your app, create an `appname.properties` file and put all your configuration properties there. 
+You can get this by running this command: `brew ls tomcat`. Copy everything until and including `/libexec/`, should look something like this: `/usr/local/Cellar/tomcat/9.0.21/libexec`
 
-5. Copy commonly used JARs from Glassfish to Tomcat. You can run something like this command: 
+3. **Set your $TOMCAT_HOME variable**
+
+You don't need to add Tomcat to your path, unless you want to. You can run everything through IntelliJ and it'll take care of most things for you. However, for convenience at the command line you can create a $TOMCAT_HOME variable to make `cd`ing to the Tomcat directory easier. Find your Tomcat install location with `brew ls tomcat`. Open your `.bash_profile` (or whatever alternative you have) and add this line: 
+```bash
+export TOMCAT_HOME=/usr/local/Cellar/tomcat/9.0.21/libexec/
+```
+Change the path to be whatever your Tomcat install location is. Don't forget to source the change like this: 
+```bash
+source ~/.bash_profile
+```
+After that, you can navigate to your Tomcat install directory like this: `cd $TOMCAT_HOME`. 
+
+4. **Create Tomcat server configuration in IntelliJ**
+
+Most everything is the same as in Glassfish, just set the Tomcat home to whatever you just copied above. One important thing is under the deploy tab, you'll have to change the default deploy context. Tomcat defaults to /name_of_your_war_file, so change it to /app_name. For example, change /dba_public to /dba. Also, don't put a trailing /, Tomcat doesn't like that. 
+
+5. **Create a configuration file**
+
+In your app, create an `appname.properties` file and put all your configuration properties there. Usually, a properties file goes in your app's `resources` folder. 
+
+6. **Copy commonly used JARs from Glassfish to Tomcat**
+
+You can run something like this command: 
 ```bash
 cp /Users/ewood/Documents/glassfish4/glassfish/domains/domain1/lib/ext/ /usr/local/Cellar/tomcat/9.0.21/libexec/lib/
 ```
 That should copy all your currently used jars in glassfish to your Tomcat lib. 
 
-6. At the bottom of Tomcat's catalina.properties file, add these lines: 
+7. **Add configuration properties.**
+
+At the bottom of Tomcat's catalina.properties file, add these lines: 
 ```properties
 STAT_DOMAIN_PATH=https://secure.office.uii
 spring.profiles.active=DEVELOPMENT
@@ -23,14 +47,20 @@ spring.config.location=classpath:/app-configs/,file:/app-configs/*.properties
 ```
 That allows support for Stat apps, sets the Spring development profile, and allows the Spring configuration to be externalized into the `/app-configs/` directory on the servers.
 
-7. (may not be necessary) if you get an error about `jcifs.jar` when deploying, add that to your ignored jars in your Tomcat configuration. That's located at `/usr/local/Cellar/tomcat/9.0.21/libexec/conf/catalina.properties`. The line to add is `jcifs.jar,\` in the list of jars under the heading `tomcat.util.scan.StandardJarScanFilter.jarsToSkip=\`
+8. **Add shared app content and stat to your Tomcat install location.**
 
-8. Add shared app content and stat to your Tomcat install location. In /libexec/webapps, run these commands: 
+In `/libexec/webapps`, run these commands: 
 ```bash
 svn co https://code.office.uii/svn/repo/uii/shared-app-content/trunk/ shared-app-content
 svn co https://code.office.uii/svn/repo/uii/stat/branches/1.2/ stat/1.2
 svn co https://code.office.uii/svn/repo/uii/stat/branches/1.3/ stat/1.3
 ```
+
+***Optional steps***
+
+These steps may not be necessary, but could be helpful. 
+
+If you get an error about `jcifs.jar` when deploying, add that to your ignored jars in your Tomcat configuration. That's located at `/usr/local/Cellar/tomcat/9.0.21/libexec/conf/catalina.properties`. The line to add is `jcifs.jar,\` in the list of jars under the heading `tomcat.util.scan.StandardJarScanFilter.jarsToSkip=\`
 
 ## Adding Mail support
 

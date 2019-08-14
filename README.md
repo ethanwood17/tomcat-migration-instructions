@@ -45,7 +45,13 @@ STAT_DOMAIN_PATH=https://secure.office.uii
 spring.profiles.active=DEVELOPMENT
 spring.config.location=classpath:/app-configs/,file:/app-configs/*.properties
 ```
-That allows support for Stat apps, sets the Spring development profile, and allows the Spring configuration to be externalized into the `/app-configs/` directory on the servers.
+That allows support for Stat apps and sets the Spring development profile. 
+
+Then, scroll up to the line beginning with `common.loader`. Add this to the end of that line: 
+```
+,"${catalina.base}/app-configs"
+```
+This allows the Spring configuration to be externalized into the `/app-configs/` directory on the servers.
 
 8. **Add shared app content and stat to your Tomcat install location.**
 
@@ -63,6 +69,8 @@ These steps may not be necessary, but could be helpful.
 If you get an error about `jcifs.jar` when deploying, add that to your ignored jars in your Tomcat configuration. That's located at `/usr/local/Cellar/tomcat/9.0.21/libexec/conf/catalina.properties`. The line to add is `jcifs.jar,\` in the list of jars under the heading `tomcat.util.scan.StandardJarScanFilter.jarsToSkip=\`
 
 ## Adding Mail support
+
+### The Hard Way
 
 Add mail support to Tomcat. In `libexec/conf`, open `server.xml` and inside the GlobalNamingResources block, add this. 
 ```xml
@@ -107,20 +115,27 @@ Then, if your app uses any Spring mail libraries, you'll have to exclude the mai
  ```
  It's all a little bit of a pain, but oh well. 
 
+### The Easy Way
+The easy way is to include the `springboot-starter-mail` dependency, and create the mail configuration in the app without pulling in any JNDI values. This prevents the problem with the Tomcat classloader. All you need to do is to create an `app.properties` file and include these properties: 
+```properties
+spring.mail.host=smtp.office.uii
+spring.mail.port=25
+spring.mail.username=support
+spring.mail.properties.mail.smtp.from=support@utahinteractive.org
+```
+Those properties should be picked up by Spring boot, and you should be able to send emails (only from the test server, it doesn't work locally).
+
 ## Configuring Shared App Content
 
-If you use Spring 5 and include the new `spring-boot-starter-security`, you might run into an error similar to this: 
-```
-org.apache.catalina.core.StandardWrapperValve.invoke Servlet.service() for servlet [dba] in context with path [/dba] threw exception org.springframework.security.web.firewall.RequestRejectedException: The request was rejected because the URL contained a potentially malicious String “;”
-```
-Apparently, the shared app content servlet uses semicolons in its urls to do decorating. Newer versions of Spring security block semicolons by default due to security concerns. Therefore, in order to prevent this exception, you need to turn off the default behavior, by adding this to your XML security configuration: 
+If you're working on an app that uses shared app content and you don't have time to update to stat, you can upgrade to Spring 5 and still use shared app content, but you'll have to make sure you're using a version that works with Spring 5. For some reason, `lib-shared-content:1.1` doesn't work with Spring 5. Fortunately, version 1.1.1.1 does work. So, include this Maven dependency: 
 ```xml
-<bean id="allowSemicolonHttpFirewall" class="org.springframework.security.web.firewall.StrictHttpFirewall">
-    <property name="allowSemicolon" value="true"/>
-</bean>
-
-<sec:http-firewall ref="allowSemicolonHttpFirewall"/>
+<dependency>
+    <groupId>uii</groupId>
+    <artifactId>lib-shared-content</artifactId>
+    <version>1.1.1.1</version>
+</dependency>
 ```
+You shouldn't need to change anything about your servlet configuration to make this work. 
 
 ## Setting up a Development Profile
 
@@ -188,3 +203,26 @@ scp admin/target/*.war tomcat@ui405:/home/tomcat/inst1.ui405/webapps/dba-admin.w
 scp public/target/*.war tomcat@ui405:/home/tomcat/inst1.ui405/webapps/dba.war
 ```
 The script will depend on how many WARs you're deploying (separate admin/public portions, or all one single WAR?) and which server/instance you're deploying on. 
+
+## Miscellaneous Changes
+
+If you use Spring 5 and include the new `spring-boot-starter-security`, you might run into an error similar to this: 
+```
+org.apache.catalina.core.StandardWrapperValve.invoke Servlet.service() for servlet [dba] in context with path [/dba] threw exception org.springframework.security.web.firewall.RequestRejectedException: The request was rejected because the URL contained a potentially malicious String “;”
+```
+Newer versions of Spring security block semicolons by default due to security concerns. Therefore, in order to prevent this exception, you need to turn off the default behavior, by adding this to your XML security configuration: 
+```xml
+<bean id="allowSemicolonHttpFirewall" class="org.springframework.security.web.firewall.StrictHttpFirewall">
+    <property name="allowSemicolon" value="true"/>
+</bean>
+
+<sec:http-firewall ref="allowSemicolonHttpFirewall"/>
+```
+
+## Converting to Java Config
+If you want to convert to Java configuration, your best bet is probably to look at some other applications and how they're set up. One thing you'll almost certainly have to do is to install the `ojdbc7.jar` file in your local Maven repository. To do that, run something similar to this command: 
+```bash
+mvn install:install-file -Dfile=/usr/local/Cellar/tomcat/9.0.21/libexec/lib/ojdbc7.jar -DgroupId=com.oracle -DartifactId=ojdbc7 -Dversion=12.1.0.2.0 -Dpackaging=jar
+```
+
+You'll want to change the `-Dfile` bit to the path to your `ojdbc7.jar` file. 

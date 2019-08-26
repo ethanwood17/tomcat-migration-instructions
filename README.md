@@ -119,7 +119,7 @@ Then, if your app uses any Spring mail libraries, you'll have to exclude the mai
 The easy way is to include the `springboot-starter-mail` dependency, and create the mail configuration in the app without pulling in any JNDI values. This prevents the problem with the Tomcat classloader. All you need to do is to create an `app.properties` file and include these properties: 
 ```properties
 spring.mail.host=smtp.office.uii
-spring.mail.port=25
+spring.mail.port=465
 spring.mail.username=support
 spring.mail.properties.mail.smtp.from=support@utahinteractive.org
 ```

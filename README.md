@@ -43,7 +43,8 @@ At the bottom of Tomcat's catalina.properties file, add these lines:
 ```properties
 STAT_DOMAIN_PATH=https://secure.office.uii
 spring.profiles.active=DEVELOPMENT
-spring.config.location=classpath:/app-configs/,file:/app-configs/*.properties
+env=DEVELOPMENT
+spring.profiles.active=${env}
 ```
 That allows support for Stat apps and sets the Spring development profile. 
 

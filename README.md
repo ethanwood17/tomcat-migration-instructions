@@ -71,52 +71,7 @@ If you get an error about `jcifs.jar` when deploying, add that to your ignored j
 
 ## Adding Mail support
 
-### The Hard Way
-
-Add mail support to Tomcat. In `libexec/conf`, open `server.xml` and inside the GlobalNamingResources block, add this. 
-```xml
-<Resource name="mail/support"
-              auth="Container"
-              type="javax.mail.Session"
-              mail.smtp.host="smtp.office.uii"
-              mail.smtp.user="support"
-              mail.smtp.from="support@utahinteractive.org" />
-```
-After saving the file, open `context.xml` and inside the `Context` block, add this: 
-```xml
-<ResourceLink global="mail/support" name="mail/support" type="javax.mail.Session" />
-```
-You may need to change references to this JNDI value in your app. Some apps use a Glassfish JDNI/web.xml hack, wherein the MailSession is defined in the web.xml file and included as a JNDI value in a Spring config file. If you find that, remove the JNDI configuration from the web.xml file, then change any references to the JDNI value from something like this: `java:comp/env/web.xml/mail/support` to something like this: `java:comp/env/mail/support`. Essentially, get rid of the web.xml part.
-
-Also, because of how Tomcat's classloader works, you won't be able to include the `javax.mail.jar` dependency from Maven in your project. Instead, you'll want to include the mail jar dependency as in `provided` scope, which informs Maven that it should be used to compile with, but not bundled into the WAR. It will be provided by the application server. As long as you've added the mail jar to your Tomcat `/lib` folder, then the dependency should be resolved properly. That Maven dependency should look like this, assuming you're using the JAR file located in Confluence: 
-```xml
-<dependency>
-    <groupId>com.sun.mail</groupId>
-    <artifactId>javax.mail</artifactId>
-    <version>1.5.6</version>
-    <scope>provided</scope>
-</dependency>
-```
-Then, if your app uses any Spring mail libraries, you'll have to exclude the mail jar from those. For instance, if you want to use the `JavaMailSender` class, bundled in Spring mail dependencies, you'll have to do something like this: 
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-mail</artifactId>
-    <exclusions>
-        <exclusion>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>javax.mail</artifactId>
-        </exclusion>
-    </exclusions>
-</dependency>
- ```
- Otherwise you'll get an error like this when starting the application: 
- ```
- The local resource link [support] that refers to global resource [mail/support] was expected to return an instance of [javax.mail.Session] but returned an instance of [javax.mail.Session]
- ```
- It's all a little bit of a pain, but oh well. 
-
-### The Easy Way
+### Java Config
 The easy way is to include the `springboot-starter-mail` dependency, and create the mail configuration in the app without pulling in any JNDI values. This prevents the problem with the Tomcat classloader. All you need to do is to create an `app.properties` file and include these properties: 
 ```properties
 spring.mail.host=smtp.office.uii
@@ -125,6 +80,27 @@ spring.mail.username=support
 spring.mail.properties.mail.smtp.from=support@utahinteractive.org
 ```
 Those properties should be picked up by Spring boot, and you should be able to send emails (only from the test server, it doesn't work locally).
+
+### XML Config
+
+Add a bean in your config file with something like these values. 
+
+```xml
+<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+    <property name="host" value="smtp.office.uii"/>
+    <property name="username" value="support"/>
+    <property name="javaMailProperties">
+        <props>
+            <prop key="mail.transport.protocol">smtp</prop>
+            <prop key="mail.smtp.auth">true</prop>
+            <prop key="mail.smtp.starttls.enable">true</prop>
+            <prop key="mail.smtp.from">support@utahinteractive.org</prop>
+            <!-- Change to true to start debug -->
+            <prop key="mail.debug">false</prop>
+        </props>
+    </property>
+</bean>
+```
 
 ## Configuring Shared App Content
 
